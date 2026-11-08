@@ -82,7 +82,7 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         except Exception as err:
             _LOGGER.debug("Ścieżka statyczna karty została już zarejestrowana: %s", err)
 
-        add_extra_js_url(hass, f"{CARD_URL}?v=1.0.0")
+        add_extra_js_url(hass, f"{CARD_URL}?v=1.1.0")
 
         # Kopiuj do /config/www/ dla kompatybilności ze ścieżką /local/
         def _sync_to_www():

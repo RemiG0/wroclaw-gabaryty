@@ -1,10 +1,12 @@
 /**
  * Wrocław Gabaryty Card (wroclaw-gabaryty-card.js)
- * Dedykowana karta Lovelace dla Home Assistant prezentująca tabelę miejsc wywozu
+ * Dedykowana, responsywna karta Lovelace dla Home Assistant prezentująca miejsca wywozu
  * odpadów wielkogabarytowych we Wrocławiu wg daty i odległości dojazdu autem (OSRM / Google Maps).
+ * Na telefonie (< 600px) automatycznie przełącza się w ergonomiczny widok kompaktowych kart
+ * bez przewijania poziomego; na tablecie/komputerze wyświetla pełną tabelę.
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -99,62 +101,67 @@ class WroclawGabarytyCard extends HTMLElement {
         }
 
         ha-card {
-          padding: 1rem;
+          padding: 0.85rem;
           background: var(--ha-card-background, var(--card-background-color, #fff));
           color: var(--primary-text-color, #1a1a1a);
           border-radius: var(--ha-card-border-radius, 12px);
           box-sizing: border-box;
+          overflow: clip;
         }
 
         .card-container {
-          container-type: inline-size;
+          container: card / inline-size;
+          inline-size: 100%;
         }
 
         .header {
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
-          margin-bottom: 1rem;
+          gap: 0.65rem;
+          margin-block-end: 0.85rem;
         }
 
         .header-top {
           display: flex;
           flex-wrap: wrap;
-          align-items: center;
+          align-items: safe center;
           justify-content: space-between;
-          gap: 0.5rem;
+          gap: 0.45rem;
         }
 
         h2 {
           margin: 0;
-          font-size: 1.2rem;
+          font-size: clamp(1rem, 4cqi, 1.2rem);
           font-weight: 600;
           text-align: start;
           display: flex;
-          align-items: center;
-          gap: 0.5rem;
+          align-items: safe center;
+          gap: 0.4rem;
+          line-height: 1.25;
         }
 
         .summary-badges {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.4rem;
-          font-size: 0.8rem;
+          gap: 0.35rem;
+          font-size: 0.76rem;
         }
 
         .badge {
           display: inline-flex;
-          align-items: center;
-          gap: 0.3rem;
-          padding: 0.2rem 0.55rem;
+          align-items: safe center;
+          gap: 0.25rem;
+          padding: 0.18rem 0.5rem;
           border-radius: 999px;
           font-weight: 600;
+          font-size: 0.75rem;
           border: 1px solid rgba(127, 127, 127, 0.35);
           background: rgba(127, 127, 127, 0.1);
+          white-space: nowrap;
         }
 
         .badge--active {
-          background: rgba(46, 125, 19, 0.16);
+          background: rgba(46, 125, 19, 0.18);
           border-color: #2e7d13;
           color: var(--primary-text-color, inherit);
         }
@@ -167,60 +174,44 @@ class WroclawGabarytyCard extends HTMLElement {
         .badge--additional {
           background: rgba(243, 156, 18, 0.18);
           border-color: #e67e22;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
+          padding: 0.1rem 0.4rem;
         }
 
         .toolbar {
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
+          gap: 0.5rem;
         }
 
         .controls-group {
           display: flex;
           flex-wrap: wrap;
-          align-items: center;
-          gap: 0.4rem;
-        }
-
-        .search-box {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          flex: 1 1 180px;
-        }
-
-        .search-box label {
-          font-size: 0.82rem;
-          font-weight: 600;
-          white-space: nowrap;
-        }
-
-        .search-box input {
-          width: 100%;
-          padding: 0.38rem 0.65rem;
-          border-radius: 8px;
-          border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.45));
-          background: var(--card-background-color, transparent);
-          color: var(--primary-text-color, inherit);
-          font-size: 0.88rem;
+          align-items: safe center;
+          gap: 0.35rem;
         }
 
         .btn-toggle {
           appearance: none;
-          border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.45));
-          background: transparent;
+          flex: 1 1 auto;
+          display: inline-flex;
+          align-items: safe center;
+          justify-content: center;
+          gap: 0.25rem;
+          border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.4));
+          background: rgba(127, 127, 127, 0.06);
           color: var(--primary-text-color, inherit);
-          padding: 0.35rem 0.65rem;
+          padding: 0.42rem 0.55rem;
           border-radius: 8px;
-          font-size: 0.82rem;
+          font-size: 0.78rem;
           font-weight: 600;
           cursor: pointer;
+          white-space: nowrap;
           transition: background-color 0.15s ease, border-color 0.15s ease;
         }
 
         .btn-toggle:hover {
-          background: rgba(46, 125, 19, 0.1);
+          background: rgba(46, 125, 19, 0.12);
         }
 
         .btn-toggle[aria-pressed="true"] {
@@ -229,92 +220,193 @@ class WroclawGabarytyCard extends HTMLElement {
           color: #ffffff;
         }
 
-        .table-scroll {
-          width: 100%;
-          overflow-x: auto;
+        .btn-refresh {
+          flex: 0 0 auto;
+          margin-inline-start: auto;
         }
 
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: start;
-          font-size: 0.9rem;
+        .label-wide {
+          display: none;
         }
 
-        th,
-        td {
-          padding: 0.65rem 0.5rem;
-          border-bottom: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
-          text-align: start;
-          vertical-align: middle;
+        .search-box {
+          display: flex;
+          align-items: safe center;
+          gap: 0.4rem;
+          inline-size: 100%;
         }
 
-        th {
-          font-size: 0.78rem;
-          font-weight: 700;
-          color: var(--secondary-text-color, #666);
+        .search-box label {
+          font-size: 0.8rem;
+          font-weight: 600;
           white-space: nowrap;
         }
 
-        tr.row--active {
-          background: rgba(46, 125, 19, 0.08);
+        .search-box input {
+          inline-size: 100%;
+          padding: 0.42rem 0.65rem;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.4));
+          background: var(--card-background-color, transparent);
+          color: var(--primary-text-color, inherit);
+          font-size: 0.86rem;
+          box-sizing: border-box;
+        }
+
+        /* =========================================================
+         * DOMYŚLNY WIDOK MOBILNY (Ergonomiczne karty Grid bez scrolla)
+         * ========================================================= */
+        .table-wrapper {
+          inline-size: 100%;
+        }
+
+        table,
+        tbody {
+          display: block;
+          inline-size: 100%;
+        }
+
+        thead {
+          position: absolute !important;
+          clip-path: inset(50%) !important;
+          overflow: hidden !important;
+          width: 1px !important;
+          height: 1px !important;
+          margin: -1px !important;
+          padding: 0 !important;
+          border: 0 !important;
+          white-space: nowrap !important;
+        }
+
+        tbody tr {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas:
+            "address status"
+            "date    actions"
+            "drive   actions";
+          gap: 0.22rem 0.5rem;
+          align-items: safe center;
+          padding: 0.7rem 0.75rem;
+          margin-block-end: 0.5rem;
+          border-radius: 10px;
+          border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
+          background: rgba(127, 127, 127, 0.04);
+          box-sizing: border-box;
+        }
+
+        tbody tr.row--active {
+          background: rgba(46, 125, 19, 0.1);
+          border-color: rgba(46, 125, 19, 0.55);
+        }
+
+        tbody td {
+          display: block;
+          padding: 0;
+          border: 0;
+          text-align: start;
+          min-inline-size: 0;
+        }
+
+        td.cell-address {
+          grid-area: address;
+        }
+
+        td.cell-status {
+          grid-area: status;
+          justify-self: end;
+        }
+
+        td.cell-date {
+          grid-area: date;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 0.35rem;
+        }
+
+        td.cell-drive {
+          grid-area: drive;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 0.35rem;
+        }
+
+        td.cell-straight {
+          display: none;
+        }
+
+        td.cell-actions {
+          grid-area: actions;
+          justify-self: end;
+          align-self: end;
         }
 
         .address-cell {
-          font-weight: 600;
+          font-weight: 700;
+          font-size: 0.96rem;
+          line-height: 1.25;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: safe center;
+          gap: 0.35rem;
+          overflow-wrap: anywhere;
         }
 
         .address-sub {
-          font-size: 0.76rem;
-          color: var(--secondary-text-color, #666);
-          font-weight: 400;
-          margin-top: 0.15rem;
+          display: none;
         }
 
         .date-main {
           font-weight: 600;
+          font-size: 0.83rem;
           white-space: nowrap;
         }
 
         .date-range {
           font-size: 0.76rem;
-          color: var(--secondary-text-color, #666);
+          color: var(--secondary-text-color, #888);
           white-space: nowrap;
         }
 
         .dist-main {
           font-weight: 700;
+          font-size: 0.85rem;
           white-space: nowrap;
         }
 
         .dist-sub {
           font-size: 0.76rem;
-          color: var(--secondary-text-color, #666);
+          color: var(--secondary-text-color, #888);
           white-space: nowrap;
         }
 
-        .col-straight {
-          display: none;
+        .mobile-straight {
+          font-size: 0.74rem;
+          color: var(--secondary-text-color, #888);
+          white-space: nowrap;
         }
 
         .route-links {
           display: flex;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           gap: 0.35rem;
         }
 
         .route-link {
           display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.3rem 0.55rem;
-          border-radius: 6px;
+          align-items: safe center;
+          justify-content: center;
+          gap: 0.22rem;
+          padding: 0.38rem 0.58rem;
+          border-radius: 8px;
           font-size: 0.78rem;
           font-weight: 600;
           text-decoration: none;
-          border: 1px solid rgba(46, 125, 19, 0.55);
+          border: 1px solid rgba(46, 125, 19, 0.6);
           color: var(--primary-text-color, inherit);
-          background: rgba(46, 125, 19, 0.1);
+          background: rgba(46, 125, 19, 0.12);
           white-space: nowrap;
         }
 
@@ -326,7 +418,7 @@ class WroclawGabarytyCard extends HTMLElement {
 
         .route-link--osm {
           border-color: rgba(52, 152, 219, 0.6);
-          background: rgba(52, 152, 219, 0.1);
+          background: rgba(52, 152, 219, 0.12);
         }
 
         .route-link--osm:hover {
@@ -339,49 +431,241 @@ class WroclawGabarytyCard extends HTMLElement {
           padding: 1.25rem;
           text-align: center;
           color: var(--secondary-text-color, #666);
-          font-size: 0.92rem;
+          font-size: 0.9rem;
         }
 
         .footer-meta {
-          margin-top: 0.75rem;
+          margin-block-start: 0.65rem;
           display: flex;
           flex-wrap: wrap;
           justify-content: space-between;
-          gap: 0.5rem;
-          font-size: 0.75rem;
+          gap: 0.35rem;
+          font-size: 0.72rem;
           color: var(--secondary-text-color, #666);
         }
 
-        /* Fallback dla przeglądarek bez wsparcia container queries */
-        @media (min-width: 640px) {
+        /* Na bardzo wąskich ekranach (< 350px) przyciski mapy przechodzą w pełny dolny wiersz */
+        @container card (max-width: 350px) {
+          tbody tr {
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+              "address status"
+              "date    date"
+              "drive   drive"
+              "actions actions";
+          }
+          td.cell-actions {
+            justify-self: stretch;
+            margin-block-start: 0.25rem;
+          }
+          .route-links {
+            inline-size: 100%;
+          }
+          .route-link {
+            flex: 1 1 50%;
+          }
+        }
+
+        /* =========================================================
+         * WIDOK TABLETOWY / DESKTOPOWY (Pełna tabela >= 600px)
+         * ========================================================= */
+        @media (min-width: 680px) {
+          ha-card {
+            padding: 1rem;
+          }
           .toolbar {
             flex-direction: row;
-            align-items: center;
+            align-items: safe center;
             justify-content: space-between;
           }
-          .col-straight {
+          .btn-toggle {
+            flex: 0 0 auto;
+          }
+          .label-wide {
+            display: inline;
+          }
+          .search-box {
+            inline-size: auto;
+            min-inline-size: 210px;
+          }
+          table {
+            display: table;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+          }
+          thead {
+            position: static !important;
+            clip-path: none !important;
+            overflow: visible !important;
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+            white-space: normal !important;
+            display: table-header-group;
+          }
+          tbody {
+            display: table-row-group;
+          }
+          tbody tr {
+            display: table-row;
+            padding: 0;
+            margin: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+          }
+          tbody td,
+          thead th {
             display: table-cell;
+            padding: 0.6rem 0.5rem;
+            border-block-end: 1px solid var(--divider-color, rgba(127, 127, 127, 0.22));
+            vertical-align: middle;
+            text-align: start;
+          }
+          thead th {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--secondary-text-color, #666);
+            white-space: nowrap;
+          }
+          .address-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--secondary-text-color, #666);
+            font-weight: 400;
+            margin-block-start: 0.12rem;
+          }
+          .mobile-straight {
+            display: none;
           }
         }
 
         @supports (container-type: inline-size) {
-          @media (min-width: 640px) {
+          @media (min-width: 680px) {
+            /* Reset media query, aby decydowała szerokość samej karty (@container) */
             .toolbar {
               flex-direction: column;
               align-items: stretch;
             }
-            .col-straight {
+            .btn-toggle {
+              flex: 1 1 auto;
+            }
+            .label-wide {
+              display: none;
+            }
+            .search-box {
+              inline-size: 100%;
+            }
+            table,
+            tbody {
+              display: block;
+            }
+            thead {
+              position: absolute !important;
+              clip-path: inset(50%) !important;
+              overflow: hidden !important;
+              width: 1px !important;
+              height: 1px !important;
+            }
+            tbody tr {
+              display: grid;
+              padding: 0.7rem 0.75rem;
+              margin-block-end: 0.5rem;
+              border-radius: 10px;
+              border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.25));
+            }
+            tbody td {
+              display: block;
+              padding: 0;
+              border: 0;
+            }
+            td.cell-date,
+            td.cell-drive {
+              display: flex;
+            }
+            td.cell-straight {
+              display: none;
+            }
+            .address-sub {
+              display: none;
+            }
+            .mobile-straight {
+              display: inline;
+            }
+          }
+
+          @container card (min-width: 600px) {
+            .toolbar {
+              flex-direction: row;
+              align-items: safe center;
+              justify-content: space-between;
+            }
+            .btn-toggle {
+              flex: 0 0 auto;
+            }
+            .label-wide {
+              display: inline;
+            }
+            .search-box {
+              inline-size: auto;
+              min-inline-size: 200px;
+              max-inline-size: 260px;
+            }
+            table {
+              display: table;
+              border-collapse: collapse;
+              font-size: 0.88rem;
+            }
+            thead {
+              position: static !important;
+              clip-path: none !important;
+              overflow: visible !important;
+              width: auto !important;
+              height: auto !important;
+              margin: 0 !important;
+              white-space: normal !important;
+              display: table-header-group;
+            }
+            tbody {
+              display: table-row-group;
+            }
+            tbody tr {
+              display: table-row;
+              padding: 0;
+              margin: 0;
+              border: 0;
+              border-radius: 0;
+              background: transparent;
+            }
+            tbody td,
+            thead th {
+              display: table-cell;
+              padding: 0.6rem 0.5rem;
+              border-block-end: 1px solid var(--divider-color, rgba(127, 127, 127, 0.22));
+              vertical-align: middle;
+              text-align: start;
+            }
+            thead th {
+              font-size: 0.76rem;
+              font-weight: 700;
+              color: var(--secondary-text-color, #666);
+              white-space: nowrap;
+            }
+            .address-sub {
+              display: block;
+              font-size: 0.75rem;
+              color: var(--secondary-text-color, #666);
+              font-weight: 400;
+              margin-block-start: 0.12rem;
+            }
+            .mobile-straight {
               display: none;
             }
           }
 
-          @container (min-width: 520px) {
-            .toolbar {
-              flex-direction: row;
-              align-items: center;
-              justify-content: space-between;
-            }
-            .col-straight {
+          @container card (min-width: 760px) {
+            td.cell-straight,
+            th.col-straight {
               display: table-cell;
             }
           }
@@ -402,19 +686,24 @@ class WroclawGabarytyCard extends HTMLElement {
             <div class="toolbar">
               <div class="controls-group" role="group" aria-label="Sortowanie i filtrowanie">
                 <button type="button" class="btn-toggle js-sort-btn" data-sort="date" aria-pressed="true">
-                  Wg daty
+                  <span aria-hidden="true">📅</span>
+                  <span><span class="label-wide">Wg </span>Data</span>
                 </button>
                 <button type="button" class="btn-toggle js-sort-btn" data-sort="drive" aria-pressed="false">
-                  Wg trasy autem
+                  <span aria-hidden="true">🚗</span>
+                  <span><span class="label-wide">Wg </span>Autem</span>
                 </button>
                 <button type="button" class="btn-toggle js-sort-btn" data-sort="straight" aria-pressed="false">
-                  W linii prostej
+                  <span aria-hidden="true">📏</span>
+                  <span>Prosta</span>
                 </button>
                 <button type="button" class="btn-toggle js-active-btn" aria-pressed="false">
-                  Tylko aktywne dziś
+                  <span aria-hidden="true">🟢</span>
+                  <span>Dziś</span>
                 </button>
-                <button type="button" class="btn-toggle js-refresh-btn">
-                  <span aria-hidden="true">🔄</span> Odśwież
+                <button type="button" class="btn-toggle btn-refresh js-refresh-btn" aria-label="Odśwież dane">
+                  <span aria-hidden="true">🔄</span>
+                  <span class="label-wide">Odśwież</span>
                 </button>
               </div>
 
@@ -424,14 +713,14 @@ class WroclawGabarytyCard extends HTMLElement {
                   id="${searchInputId}"
                   class="js-search-input"
                   type="search"
-                  placeholder="Filtruj po adresie..."
+                  placeholder="Szukaj ulicy..."
                   autocomplete="off"
                 />
               </div>
             </div>
           </header>
 
-          <div class="table-scroll js-table-container"></div>
+          <div class="table-wrapper js-table-container"></div>
           <footer class="footer-meta js-footer-meta"></footer>
         </div>
       </ha-card>
@@ -457,7 +746,11 @@ class WroclawGabarytyCard extends HTMLElement {
     const refreshBtn = this.shadowRoot.querySelector(".js-refresh-btn");
     if (refreshBtn) {
       refreshBtn.addEventListener("click", () => {
-        if (this._hass && typeof this._hass.callService === "function" && this._config?.entity) {
+        if (
+          this._hass &&
+          typeof this._hass.callService === "function" &&
+          this._config?.entity
+        ) {
           this._hass.callService("homeassistant", "update_entity", {
             entity_id: this._config.entity,
           });
@@ -530,11 +823,11 @@ class WroclawGabarytyCard extends HTMLElement {
     badgesContainer.innerHTML = `
       <span class="badge ${activeCount > 0 ? "badge--active" : ""}">
         <span aria-hidden="true">${activeCount > 0 ? "🟢" : "⚪"}</span>
-        Stoi teraz: ${escapeHtml(activeCount)}
+        Stoi dziś: ${escapeHtml(activeCount)}
       </span>
       <span class="badge">
         <span aria-hidden="true">📍</span>
-        Promień: ${escapeHtml(radiusKm)} km (${escapeHtml(rawContainers.length)} pkt)
+        ${escapeHtml(radiusKm)} km (${escapeHtml(rawContainers.length)})
       </span>
     `;
 
@@ -565,7 +858,6 @@ class WroclawGabarytyCard extends HTMLElement {
         if (sa !== sb) return sa - sb;
         return String(a.date_start).localeCompare(String(b.date_start));
       }
-      // Domyślnie po dacie, a przy tej samej dacie po odległości autem
       const cmpDate = String(a.date_start).localeCompare(String(b.date_start));
       if (cmpDate !== 0) return cmpDate;
       const da = a.drive_distance_km ?? a.straight_distance_km ?? 999;
@@ -591,14 +883,15 @@ class WroclawGabarytyCard extends HTMLElement {
             ? "badge badge--tomorrow"
             : "badge";
 
+          const straightFormatted = `${Number(item.straight_distance_km).toFixed(2)} km`;
           const driveKm =
             item.drive_distance_km != null
               ? `${Number(item.drive_distance_km).toFixed(2)} km`
-              : `${Number(item.straight_distance_km).toFixed(2)} km (prosta)`;
+              : `${straightFormatted} (prosta)`;
           const driveDuration =
             item.drive_duration_min != null
-              ? `~${item.drive_duration_min} min autem`
-              : "brak danych OSRM";
+              ? `~${item.drive_duration_min} min`
+              : "";
 
           const typeBadge =
             item.type === "Dodatkowy"
@@ -609,33 +902,34 @@ class WroclawGabarytyCard extends HTMLElement {
 
           return `
             <tr class="${isActive ? "row--active" : ""}">
-              <td>
-                <div class="date-main">${escapeHtml(item.date_display)}</div>
-                <div class="date-range">stoi do ${escapeHtml(item.date_end_display)}</div>
+              <td class="cell-date">
+                <span class="date-main"><span aria-hidden="true">📅</span> ${escapeHtml(item.date_display)}</span>
+                <span class="date-range">(do ${escapeHtml(item.date_end_display)})</span>
               </td>
-              <td>
+              <td class="cell-status">
                 <span class="${badgeClass}">
                   <span aria-hidden="true">${statusIcon}</span>
                   <span>${escapeHtml(item.status_label)}</span>
                 </span>
               </td>
-              <td>
+              <td class="cell-address">
                 <div class="address-cell">
-                  ${escapeHtml(item.address)}
+                  <span>${escapeHtml(item.address)}</span>
                   ${typeBadge}
                 </div>
                 <div class="address-sub">
-                  W linii prostej: ${escapeHtml(Number(item.straight_distance_km).toFixed(2))} km
+                  W linii prostej: ${escapeHtml(straightFormatted)}
                 </div>
               </td>
-              <td>
-                <div class="dist-main">🚗 ${escapeHtml(driveKm)}</div>
-                <div class="dist-sub">${escapeHtml(driveDuration)}</div>
+              <td class="cell-drive">
+                <span class="dist-main"><span aria-hidden="true">🚗</span> ${escapeHtml(driveKm)}</span>
+                ${driveDuration ? `<span class="dist-sub">(${escapeHtml(driveDuration)})</span>` : ""}
+                <span class="mobile-straight">• 📏 ${escapeHtml(straightFormatted)}</span>
               </td>
-              <td class="col-straight">
-                ${escapeHtml(Number(item.straight_distance_km).toFixed(2))} km
+              <td class="cell-straight">
+                ${escapeHtml(straightFormatted)}
               </td>
-              <td>
+              <td class="cell-actions">
                 <div class="route-links">
                   <a
                     class="route-link"
@@ -689,7 +983,7 @@ class WroclawGabarytyCard extends HTMLElement {
       : "przed chwilą";
 
     footerMeta.innerHTML = `
-      <span>Źródło: gabaryty.ekosystem.wroc.pl • Trasy: OSRM (OpenStreetMap)</span>
+      <span>Źródło: Ekosystem Wrocław • Trasy: OSRM</span>
       <span>Aktualizacja: ${escapeHtml(updatedText)}</span>
     `;
   }
@@ -819,4 +1113,3 @@ console.info(
   "background:#2e7d13;color:#fff;font-weight:bold;padding:2px 6px;border-radius:4px 0 0 4px",
   "background:#1a1a1a;color:#fff;padding:2px 6px;border-radius:0 4px 4px 0"
 );
-
