@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wrocław Gabaryty (Ekosystem)",
+        "description": "Configure bulky waste container schedule in Wrocław with driving route calculation via OSRM (OpenStreetMap).",
+        "data": {
+          "latitude": "Home latitude",
+          "longitude": "Home longitude",
+          "radius_km": "Search radius around home (km)",
+          "days_ahead": "Days ahead to include",
+          "max_items": "Maximum items in table",
+          "include_additional": "Include additional placements"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Location is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wrocław Gabaryty Options",
+        "data": {
+          "latitude": "Home latitude",
+          "longitude": "Home longitude",
+          "radius_km": "Search radius around home (km)",
+          "days_ahead": "Days ahead to include",
+          "max_items": "Maximum items in table",
+          "include_additional": "Include additional placements"
+        }
+      }
+    }
+  }
+}
+

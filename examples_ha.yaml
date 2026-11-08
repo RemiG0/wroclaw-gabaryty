@@ -1,0 +1,71 @@
+# Przykłady konfiguracji w Home Assistant (Dashboard + Automatyzacje)
+
+## 1. Dedykowana karta JS w Dashboardzie Lovelace
+
+```yaml
+type: custom:wroclaw-gabaryty-card
+entity: sensor.gabaryty_w_okolicy
+title: Wywóz gabarytów w okolicy (5 km)
+default_sort: date
+```
+
+---
+
+## 2. Alternatywna karta Markdown (bez instalacji plików JS)
+
+Jeśli chcesz wyświetlić prostą tabelę również na karcie wbudowanej `Markdown`:
+
+```yaml
+type: markdown
+title: 🚛 Gabaryty w okolicy (5 km)
+content: >
+  {% set items = state_attr('sensor.gabaryty_w_okolicy', 'containers') or [] %}
+  {% if items | count == 0 %}
+  Brak zaplanowanych podstawień w zadanym promieniu.
+  {% else %}
+  | Termin | Status | Ulica | Dojazd autem | Trasa |
+  | :--- | :--- | :--- | :--- | :--- |
+  {% for c in items[:15] -%}
+  | **{{ c.date_display }}**<br><small>do {{ c.date_end_display }}</small> | {{ '🟢 ' if c.status == 'active' else '📅 ' }}{{ c.status_label }} | **{{ c.address }}** | {{ c.drive_distance_km if c.drive_distance_km is not none else c.straight_distance_km }} km (~{{ c.drive_duration_min or '?' }} min) | [Google]({{ c.google_maps_url }}) / [OSM]({{ c.osm_url }}) |
+  {% endfor %}
+  {% endif %}
+```
+
+---
+
+## 3. Automatyzacja: Powiadomienie na telefon, gdy w pobliżu (np. do 2 km autem) stoi kontener
+
+```yaml
+alias: "Powiadomienie: Kontener na gabaryty blisko domu"
+description: "Wysyła powiadomienie rano, jeśli w promieniu 2 km drogowych stoi dziś kontener na gabaryty"
+trigger:
+  - platform: time
+    at: "08:30:00"
+condition:
+  - condition: template
+    value_template: >
+      {% set items = state_attr('sensor.gabaryty_w_okolicy', 'containers') or [] %}
+      {{ items | selectattr('status', 'equalto', 'active')
+               | selectattr('drive_distance_km', 'defined')
+               | selectattr('drive_distance_km', 'le', 2.0)
+               | list | count > 0 }}
+action:
+  - variables:
+      closest: >
+        {% set items = state_attr('sensor.gabaryty_w_okolicy', 'containers') or [] %}
+        {{ (items | selectattr('status', 'equalto', 'active')
+                  | sort(attribute='drive_distance_km')
+                  | list)[0] }}
+  - service: notify.notify
+    data:
+      title: "🚛 Kontener na gabaryty blisko domu!"
+      message: >
+        Dziś stoi kontener przy ul. {{ closest.address }}
+        (dojazd autem: {{ closest.drive_distance_km }} km, ~{{ closest.drive_duration_min }} min,
+        dostępny do {{ closest.date_end_display }}).
+      data:
+        url: "{{ closest.google_maps_url }}"
+        clickAction: "{{ closest.google_maps_url }}"
+mode: single
+```
+

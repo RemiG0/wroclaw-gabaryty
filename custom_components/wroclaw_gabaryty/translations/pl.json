@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wrocław Gabaryty (Ekosystem)",
+        "description": "Skonfiguruj pobieranie punktów podstawienia kontenerów na gabaryty we Wrocławiu oraz obliczanie trasy dojazdu autem przez OSRM (OpenStreetMap).",
+        "data": {
+          "latitude": "Szerokość geograficzna domu (latitude)",
+          "longitude": "Długość geograficzna domu (longitude)",
+          "radius_km": "Promień wyszukiwania wokół domu (km)",
+          "days_ahead": "Zakres dni w przód",
+          "max_items": "Maksymalna liczba punktów w tabeli",
+          "include_additional": "Uwzględnij podstawienia dodatkowe (pomarańczowe punkty)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Integracja dla tej lokalizacji jest już skonfigurowana."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje Wrocław Gabaryty",
+        "data": {
+          "latitude": "Szerokość geograficzna domu (latitude)",
+          "longitude": "Długość geograficzna domu (longitude)",
+          "radius_km": "Promień wyszukiwania wokół domu (km)",
+          "days_ahead": "Zakres dni w przód",
+          "max_items": "Maksymalna liczba punktów w tabeli",
+          "include_additional": "Uwzględnij podstawienia dodatkowe (pomarańczowe punkty)"
+        }
+      }
+    }
+  }
+}
+

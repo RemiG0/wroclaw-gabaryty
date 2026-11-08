@@ -1,0 +1,25 @@
+# Environment & Secrets
+.env
+.env.*
+secrets.yaml
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+
+# Scratch & local preview files
+preview.html
+test_gabaryty.py
+ha_provision.py
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

@@ -1,0 +1,13 @@
+{
+  "domain": "wroclaw_gabaryty",
+  "name": "Wrocław Gabaryty (Ekosystem)",
+  "codeowners": ["@remi"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://gabaryty.ekosystem.wroc.pl",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://gabaryty.ekosystem.wroc.pl",
+  "requirements": [],
+  "version": "1.0.0"
+}
+
