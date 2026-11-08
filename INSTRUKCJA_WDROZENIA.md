@@ -1,128 +1,81 @@
-# Instrukcja wdrożenia i instalacji integracji Wrocław Gabaryty (HACS & Manualnie)
+# Instrukcja wdrożenia i instalacji: Wrocław Gabaryty (GitLab & HACS)
 
-Niniejszy dokument opisuje kompletną procedurę przygotowania repozytorium GitHub, instalacji komponentu za pomocą **HACS** (Home Assistant Community Store) oraz konfiguracji karty w Dashboardzie Lovelace.
-
----
-
-## 1. Architektura repozytorium dla HACS
-
-Projekt został przygotowany zgodnie ze standardem HACS dla integracji (`integration`). Struktura plików w repozytorium:
-
-```text
-├── .gitignore                          # Ignoruje pliki lokalne (.env, cache, podgląd)
-├── hacs.json                           # Metadane informujące HACS o strukturze integracji
-├── info.md                             # Krótki opis wyświetlany w HACS
-├── README.md                           # Główny opis projektu renderowany w HACS
-├── examples_ha.yaml                    # Gotowe przykłady kart i automatyzacji
-├── custom_components/
-│   └── wroclaw_gabaryty/
-│       ├── __init__.py                 # Rejestracja sensora i automatyczne ładowanie karty
-│       ├── config_flow.py              # Kreator konfiguracji w UI
-│       ├── const.py                    # Stałe (promień, horyzont dni, endpointy)
-│       ├── coordinator.py              # Pobieranie danych z Ekosystemu + routing OSRM
-│       ├── manifest.json               # Manifest integracji Home Assistant
-│       ├── sensor.py                   # Encje sensorów (tabela i najbliższy punkt)
-│       ├── frontend/
-│       │   └── wroclaw-gabaryty-card.js # Dedykowana karta JS (wbudowana w integrację)
-│       └── translations/
-│           ├── pl.json                 # Tłumaczenie PL
-│           └── en.json                 # Tłumaczenie EN
-└── www/
-    └── wroclaw-gabaryty-card.js        # Kopia karty dla instalacji manualnych (/local/)
-```
-
-> [!NOTE]
-> **Dlaczego karta JS znajduje się wewnątrz `custom_components/wroclaw_gabaryty/frontend/`?**
-> Standardowo HACS instaluje tylko folder `custom_components/<domena>`. Dzięki umieszczeniu pliku karty wewnątrz integracji oraz zastosowaniu mechanizmu `async_register_static_paths` i `add_extra_js_url` w `__init__.py`, **karta Lovelace ładuje się automatycznie od razu po instalacji integracji z HACS** – bez konieczności ręcznego kopiowania plików do folderu `www` ani ręcznego rejestrowania zasobów w Lovelace.
+Projekt został zainicjalizowany i opublikowany w Twoim serwisie GitLab pod adresem:
+👉 **[https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty](https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty)**
 
 ---
 
-## 2. Publikacja repozytorium na GitHub
+## 1. Ważna informacja o HACS a własnym serwerze GitLab
 
-Aby móc dodać integrację do HACS jako repozytorium niestandardowe, umieść ten projekt na swoim koncie GitHub:
+Home Assistant Community Store (**HACS**) wewnętrznie korzysta z biblioteki `aiogithubapi` i do pobierania niestandardowych repozytoriów (*Custom Repositories*) wymaga adresu w formacie API GitHub (`https://github.com/owner/repo`). HACS nie potrafi odpytywać API prywatnych/samodzielnie hostowanych instancji GitLab o wydania i archiwa zip.
 
-### Krok 2.1: Utworzenie nowego repozytorium na GitHub
-1. Zaloguj się na [GitHub](https://github.com).
-2. Kliknij **New repository** (lub `+` w prawym górnym rogu).
-3. Nazwij repozytorium, np. `wroclaw-gabaryty` (lub `ha-wroclaw-gabaryty`).
-4. Ustaw repozytorium jako **Public** (HACS wymaga publicznego repozytorium do pobierania wydań).
-5. **Nie** zaznaczaj opcji dodawania README, .gitignore ani licencji (pliki te znajdują się już w projekcie).
-6. Kliknij **Create repository**.
-
-### Krok 2.2: Wypchnięcie plików z lokalnego katalogu
-Otwórz terminal w katalogu projektu (`/Users/remi/Library/CloudStorage/OneDrive-Osobisty/Dokumenty/Esens/Gabaryty`) i wykonaj polecenia:
-
-```bash
-# 1. Inicjalizacja repozytorium git
-git init
-
-# 2. Dodanie plików (plik .gitignore zabezpiecza przed dodaniem .env)
-git add .
-
-# 3. Pierwszy commit
-git commit -m "Initial commit: Wroclaw Gabaryty HA integration and Lovelace card"
-
-# 4. Ustawienie głównej gałęzi
-git branch -M main
-
-# 5. Podpięcie Twojego zdalnego repozytorium (zamień YOUR_USERNAME i REPO_NAME)
-git remote add origin https://github.com/YOUR_USERNAME/wroclaw-gabaryty.git
-
-# 6. Wypchnięcie do GitHub
-git push -u origin main
-```
-
-### Krok 2.3: Utworzenie pierwszego wydania (Release) na GitHub
-HACS rekomenduje wersjonowanie wydań:
-1. W swoim repozytorium na GitHubie kliknij po prawej stronie **Releases** → **Create a new release**.
-2. W polu **Choose a tag** wpisz: `v1.0.0` (i kliknij *Create new tag*).
-3. Jako **Release title** wpisz: `v1.0.0 – Pierwsze wydanie`.
-4. Kliknij **Publish release**.
+### Rozwiązanie idealne (GitLab jako główne źródło + Mirror do GitHub dla HACS):
+Nie musisz rezygnować ze swojego GitLaba! Standardową i najwygodniejszą praktyką jest:
+1. Pracujesz i wysyłasz commity (`git push`) wyłącznie na swój **GitLab** (`gitlab.gasiorowscy.pl`).
+2. Włączasz w GitLabie funkcję **Repository Mirroring** (automatyczne lustro), która natychmiast kopiuje każdą zmianę na darmowe repozytorium GitHub.
+3. W **HACS** wskazujesz link do GitHuba – dzięki temu instalacja i aktualizacje jednym kliknięciem działają perfekcyjnie.
 
 ---
 
-## 3. Instalacja przez HACS w Home Assistant
+## 2. Stan repozytorium na Twoim GitLabie
 
-Gdy repozytorium znajduje się na GitHubie:
+Repozytorium jest już utworzone, zawiera pierwszy commit oraz otagowaną wersję **v1.0.0**:
 
-1. Otwórz swój Home Assistant i przejdź do zakładki **HACS**.
-2. Kliknij **trzy kropki** w prawym górnym rogu ekranu i wybierz **Niestandardowe repozytoria** (*Custom repositories*).
-3. W formularzu:
-   - **Repozytorium:** wklej adres URL swojego repozytorium, np. `https://github.com/YOUR_USERNAME/wroclaw-gabaryty`
-   - **Typ / Kategoria:** wybierz **Integracja** (*Integration*)
-4. Kliknij **Dodaj** (*Add*).
-5. Znajdź nowo dodaną pozycję **Wrocław Gabaryty (Ekosystem)** na liście HACS i kliknij **Pobierz** (*Download*).
-6. Po pobraniu zrestartuj Home Assistant (**Ustawienia → System → Uruchom ponownie**).
+- **URL projektu w przeglądarce:** `https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty`
+- **Klonowanie HTTPS:** `https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty.git`
+- **Klonowanie SSH:** `ssh://git@gitlab.gasiorowscy.pl:2222/Remi/wroclaw-gabaryty.git`
+
+Plik `.gitignore` automatycznie wyklucza pliki `.env`, dane testowe i lokalne logi, dzięki czemu Twoje hasła i dane logowania **nie zostały** wysłane do repozytorium.
 
 ---
 
-## 4. Konfiguracja integracji w Home Assistant
+## 3. Konfiguracja automatycznego lustra GitLab ➔ GitHub (dla HACS)
 
-Po restarcie Home Assistanta:
+Aby HACS mógł instalować komponent z Twojego repozytorium:
 
-1. Przejdź do **Ustawienia → Urządzenia oraz usługi → Dodaj integrację**.
-2. Wyszukaj **Wrocław Gabaryty (Ekosystem)**.
-3. W formularzu konfiguracji:
-   - **Szerokość i długość geograficzna:** domyślnie podstawią się współrzędne Twojego domu zdefiniowane w strefie `zone.home`.
-   - **Promień wyszukiwania wokół domu (km):** domyślnie `5.0` km (możesz zmienić np. na `3.0` lub `10.0`).
-   - **Zakres dni w przód:** domyślnie `30` dni.
-   - **Maksymalna liczba punktów w tabeli:** domyślnie `30`.
-   - **Uwzględnij podstawienia dodatkowe:** zaznaczone (`Tak`).
-4. Kliknij **Zatwierdź**.
+### Krok 3.1: Utworzenie pustego repozytorium na GitHub
+1. Zaloguj się na [GitHub](https://github.com) i kliknij **New repository**.
+2. Nazwij je np. `wroclaw-gabaryty` i ustaw jako **Public**.
+3. **Nie** dodawaj README ani innych plików (repozytorium musi być puste).
 
-### Utworzone encje:
-- `sensor.gabaryty_w_okolicy` – główny sensor przechowujący liczbę punktów oraz pełną listę z odległościami dojazdu autem i linkami do map.
-- `sensor.najblizszy_kontener_na_gabaryty` – sensor ze stanem wskazującym najbliższy kontener (do powiadomień i automatyzacji).
+### Krok 3.2: Wygenerowanie tokenu Personal Access Token na GitHub
+1. Na GitHubie wejdź w **Settings → Developer Settings → Personal access tokens → Tokens (classic)**.
+2. Kliknij **Generate new token (classic)**, nazwij go np. `GitLab Mirror`, zaznacz uprawnienie **`repo`** (pełny dostęp do repozytoriów) i zapisz wygenerowany token.
+
+### Krok 3.3: Włączenie Mirroringu w GitLabie
+1. Wejdź do swojego projektu na GitLabie:
+   `https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty/-/settings/repository`
+2. Rozwiń sekcję **Mirroring repositories**.
+3. Wypełnij pola:
+   - **Git repository URL:** `https://TWÓJ_LOGIN_GITHUB@github.com/TWÓJ_LOGIN_GITHUB/wroclaw-gabaryty.git`
+   - **Mirror direction:** `Push`
+   - **Authentication method:** `Password`
+   - **Password:** wklej token wygenerowany w kroku 3.2.
+4. Kliknij **Mirror repository**.
+
+Od tego momentu każdy `git push` na `gitlab.gasiorowscy.pl` automatycznie zsynchronizuje się z GitHubem!
 
 ---
 
-## 5. Dodanie karty tabeli do Dashboardu Lovelace
+## 4. Dodanie i instalacja w HACS
 
-Dzięki wbudowanemu loaderowi frontendowemu, karta jest rejestrowana automatycznie.
+Gdy repozytorium jest zsynchronizowane z GitHubem:
 
-1. Przejdź do swojego Dashboardu i kliknij **Edytuj dashboard** (ołówek lub trzy kropki → Edytuj).
-2. Kliknij **+ Dodaj kartę**.
-3. Wyszukaj na liście kartę **Wrocław Gabaryty – Tabela w okolicy** lub na samym dole wybierz **Ręczna (Manual)** i wklej poniższy kod YAML:
+1. W Home Assistant otwórz **HACS**.
+2. W prawym górnym rogu kliknij **trzy kropki** → **Niestandardowe repozytoria** (*Custom repositories*).
+3. Podaj adres: `https://github.com/TWÓJ_LOGIN_GITHUB/wroclaw-gabaryty` i wybierz kategorię **Integracja** (*Integration*).
+4. Kliknij **Dodaj**, znajdź integrację na liście i kliknij **Pobierz** (*Download*).
+5. Zrestartuj Home Assistant (**Ustawienia → System → Uruchom ponownie**).
+
+> [!TIP]
+> **Automatyczne ładowanie karty JS:**
+> Integracja ma wbudowaną kartę `wroclaw-gabaryty-card.js` wewnątrz folderu `custom_components/wroclaw_gabaryty/frontend/` i automatycznie rejestruje ją w zasobach Lovelace (`add_extra_js_url`). Po instalacji przez HACS nie musisz kopiować żadnych plików do katalogu `www` ani dodawać ręcznie zasobów w ustawieniach dashboardu!
+
+---
+
+## 5. Dodanie karty na Dashboard
+
+W swoim dashboardzie dodaj kartę jako **Ręczna (Manual)** lub wybierz z listy:
 
 ```yaml
 type: custom:wroclaw-gabaryty-card
@@ -131,29 +84,18 @@ title: Wywóz gabarytów w okolicy (5 km)
 default_sort: date
 ```
 
-### Opcje karty:
-- `title` – nagłówek wyświetlany na karcie (domyślnie: *Wywóz gabarytów w okolicy*).
-- `default_sort` – domyślne sortowanie przy otwarciu karty:
-  - `date` – wg terminu podstawienia (aktywne dziś na samej górze),
-  - `drive` – wg najkrótszej trasy dojazdu autem (OSRM),
-  - `straight` – wg odległości w linii prostej.
-
 ---
 
-## 6. Zapasowa procedura wdrożenia manualnego (bez HACS)
+## 6. Alternatywa: Aktualizacja bezpośrednio z GitLaba (bez GitHuba i HACS)
 
-Gdybyś chciał wdrożyć integrację na innym Home Assistancie bez użycia HACS:
+Jeśli wolisz całkowicie pominąć GitHub i HACS, możesz aktualizować komponent bezpośrednio z Twojego serwera GitLab za pomocą prostego polecenia w Home Assistant (lub GitLab CI/CD):
 
-1. **Skopiowanie plików integracji:**
-   Skopiuj katalog `custom_components/wroclaw_gabaryty` na serwer HA do:
-   `/config/custom_components/wroclaw_gabaryty/`
-2. **Skopiowanie pliku karty JS:**
-   Skopiuj `www/wroclaw-gabaryty-card.js` do:
-   `/config/www/wroclaw-gabaryty-card.js`
-3. **Rejestracja zasobu (jeśli nie ładuje się automatycznie):**
-   W HA przejdź do **Ustawienia → Dashboardy → Trzy kropki → Zasoby → Dodaj zasób**:
-   - URL: `/local/wroclaw-gabaryty-card.js?v=1.0.0`
-   - Typ zasobu: `Moduł JavaScript`
-4. **Restart Home Assistant Core:**
-   Zrestartuj HA i dodaj integrację w *Urządzenia oraz usługi*.
-
+Na serwerze Home Assistant (`10.11.0.44`):
+```bash
+# Klonowanie / aktualizacja bezpośrednio z Twojego GitLaba
+git clone https://gitlab.gasiorowscy.pl/Remi/wroclaw-gabaryty.git /tmp/gabaryty_repo
+cp -r /tmp/gabaryty_repo/custom_components/wroclaw_gabaryty /config/custom_components/
+rm -rf /tmp/gabaryty_repo
+ha core restart
+```
+Można to również podpiąć jako skrypt shell w Home Assistant (`shell_command`) lub pipeline `.gitlab-ci.yml`.
